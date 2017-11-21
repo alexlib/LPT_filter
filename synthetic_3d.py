@@ -318,7 +318,7 @@ def main():
 	N_traj = 5
 	burger.trajectory(N_traj, dt, t_end)
 
-	skip = np.linspace(1, 10, 1).astype(int)
+	skip = np.linspace(1, 10, 5).astype(int)
 	delta = np.linspace(1e-3, 1e-1, 1) 
 	N_sample = np.linspace(3, 5, 1)
 
