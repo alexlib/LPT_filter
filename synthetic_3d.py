@@ -23,7 +23,7 @@ def decompose(x, y, x0, y0, vel, R, sign):
 	v = sign * (dx / R * vel) - 0.5 * 0.01 * dy
 	return u, v
 
-def velocity(d, gamma = 50, sigma = 0.01, nu = 1):
+def velocity(d, gamma = 100, sigma = 0.01, nu = 1):
 	return gamma * (1 - np.exp(-sigma * d**2 / 4 / nu)) / (2 * np.pi * d)
 
 def Burger(X, Y, x0, y0, sign):
@@ -33,7 +33,7 @@ def Burger(X, Y, x0, y0, sign):
 
 	return vx, vy
 
-def Vel(x, y, z, centroids, gamma = 50, sigma = 0.01, nu = 1):
+def Vel(x, y, z, centroids, gamma = 100, sigma = 0.01, nu = 1):
 	ux = 0
 	uy = 0
 
@@ -52,7 +52,7 @@ def Vel(x, y, z, centroids, gamma = 50, sigma = 0.01, nu = 1):
 	return ux, uy, uz
 
 
-def Grad(x, y, centroids, axis, gamma = 50, sigma = 0.01, nu = 1):
+def Grad(x, y, centroids, axis, gamma = 100, sigma = 0.01, nu = 1):
 	du_dx = 0
 	du_dy = 0
 
@@ -221,7 +221,7 @@ def Calc_error(U, U_hat, A, A_hat, T, l):
 	err_U = {}
 	err_A = {}
 
-	plt.figure()
+	# plt.figure()
 
 	for n in U_hat.keys():
 		err_U[n] = []
@@ -237,9 +237,9 @@ def Calc_error(U, U_hat, A, A_hat, T, l):
 			err_U[n].append( np.mean(np.abs(U[i][l:-l,-1] - U_hat[n][i][l:-l,-1]) / U[i][l:-l,-1]) )
 			err_A[n].append( np.mean(np.abs(A[i][l:-l,-1] - A_hat[n][i][l:-l,-1]) / A[i][l:-l,-1]) )
 
-			plt.plot(T[i][l:-l], U_hat[n][i][l:-l,-1], label = "{}_{}".format(n, i))
+			# plt.plot(T[i][l:-l], U_hat[n][i][l:-l,-1], label = "{}_{}".format(n, i))
 
-			plt.plot(T[i][l:-l], U[i][l:-l,-1], label = "GT_{}".format(i))
+			# plt.plot(T[i][l:-l], U[i][l:-l,-1], label = "GT_{}".format(i))
 
 
 		err_U[n] = np.mean(np.array(err_U[n]))
@@ -249,7 +249,7 @@ def Calc_error(U, U_hat, A, A_hat, T, l):
 		print ("Velocity {}: {}".format(n, err_U[n]))
 		print ("Acceleration {}: {}".format(n, err_A[n]))
 
-	plt.legend()
+	# plt.legend()
 
 	return err_U, err_A
 
@@ -260,11 +260,11 @@ def filter(names, streamline, T, l, dt):
 
 	return f.process()
 
-def make_plot(X, Y, Z, vx, vy, vz, streamline, U, U_hat, A, A_hat, T):
+def make_plot(X, Y, Z, vx, vy, vz, streamline, U, U_hat, A, A_hat, T, T_hat):
 	plt.figure(1)
 	for i in range(len(T)):
 		for n in U_hat.keys():
-			plt.plot(T[i], U_hat[n][i][:,-1], '*', label = '{}_{}'.format(n, i))
+			plt.plot(T_hat[i], U_hat[n][i][:,-1], '*', label = '{}_{}'.format(n, i))
 		plt.plot(T[i], U[i][:,-1], label = 'GT {}'.format(i))
 		# plt.plot(T[i], U[i], label = 'U {}'.format(i))
 	plt.legend()
@@ -273,7 +273,7 @@ def make_plot(X, Y, Z, vx, vy, vz, streamline, U, U_hat, A, A_hat, T):
 	plt.figure(2)
 	for i in range(len(T)):
 		for n in A_hat.keys():
-			plt.plot(T[i], A_hat[n][i][:,-1], '*', label = '{}_{}'.format(n, i))
+			plt.plot(T_hat[i], A_hat[n][i][:,-1], '*', label = '{}_{}'.format(n, i))
 		plt.plot(T[i], A[i][:,-1], label = 'GT {}'.format(i))
 		# plt.plot(T[i], U[i], label = 'U {}'.format(i))
 	plt.legend()
@@ -352,7 +352,7 @@ def main():
 
 	with open("err_A", 'w') as f:
 		pickle.dump(err_A, f)
-	# make_plot(X, Y, Z, vx, vy, vz, streamline, U, U_hat, A, A_hat, T)
+	make_plot(X, Y, Z, vx, vy, vz, streamline, U, U_hat, A, A_hat, T, T_new)
 	plt.show()
 
 if __name__ == "__main__":
