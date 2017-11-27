@@ -314,13 +314,14 @@ def main():
 
 
 	dt = 0.1
-	t_end = 10
-	N_traj = 5
+	N_t = 100
+	t_end = N_t * dt
+	N_traj = 2
 	burger.trajectory(N_traj, dt, t_end)
 
-	skip = np.linspace(1, 10, 5).astype(int)
+	skip = np.linspace(2, 5, 4).astype(int)
+	N_sample = np.linspace(3, 5, 3).astype(int)
 	delta = np.linspace(1e-3, 1e-1, 1) 
-	N_sample = np.linspace(3, 5, 1)
 
 
 	names = ["Spline", "Finite difference", "Polynomial", "Gaussian"]
@@ -333,21 +334,20 @@ def main():
 	err_U["N_sample"] = N_sample
 
 	for n in names:
-		err_U[n] = np.zeros((len(skip), len(delta), len(N_sample)))
+		err_U[n] = np.zeros((len(skip), len(N_sample), len(delta)))
 		err_A[n] = np.zeros_like(err_U[n])
 
 	for i in range(len(skip)):
-		for j in range(len(delta)):
-			for k in range(len(N_sample)):
+		for j in range(len(N_sample)):
+			for k in range(len(delta)):
 
-				streamline, U, A, T = burger.distort(skip[i], delta[j])
+				streamline, U, A, T = burger.distort(skip[i], delta[k])
 
 				dt_ = dt * skip[i]
-				l = int(N_sample[k] / dt_ + 0.5)
 
-				U_hat, A_hat = filter(names, streamline, T, l, dt_)
+				U_hat, A_hat = filter(names, streamline, T, N_sample[j], dt_)
 
-				err_U_, err_A_ = Calc_error(U, U_hat, A, A_hat, T, l)
+				err_U_, err_A_ = Calc_error(U, U_hat, A, A_hat, T, N_sample[j])
 
 				for n in names:
 					err_U[n][i,j,k] = err_U_[n]
@@ -362,6 +362,8 @@ def main():
 
 	burger.make_plot(U_hat, A_hat, T)
 	plt.show()
+
+	print err_A["Gaussian"][:,:,0]
 
 if __name__ == "__main__":
 	main()
