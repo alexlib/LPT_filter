@@ -10,6 +10,7 @@ from numpy import random as np_random
 from numpy.linalg import norm as norm
 import json
 import pickle
+import time
 
 import filters
 
@@ -36,8 +37,8 @@ class Burger(object):
 		self.centroids = []
 
 		for _ in range(N_burger):
-			x0 = random.uniform(xmin, xmax)
-			y0 = random.uniform(ymin, ymax)
+			x0 = 1e-3 #random.uniform(xmin, xmax)
+			y0 = 1e-3 #random.uniform(ymin, ymax)
 			sign = random.choice([-1, 1])
 
 			self.centroids.append((x0, y0, sign))
@@ -45,6 +46,9 @@ class Burger(object):
 		self.gamma = gamma
 		self.sigma = sigma
 		self.nu = nu
+
+		self.L0 = np.sqrt(2 * nu / sigma)
+		self.U0 = gamma / self.L0
 
 	def one_vortex(self, x0, y0, sign, x = None, y = None):
 		if x is None:
@@ -250,13 +254,20 @@ class Burger(object):
 		fig = plt.figure()
 		ax = fig.gca(projection='3d')
 		for i in range(len(self.T)):
-			ax.plot(self.streamline[i][:,0], self.streamline[i][:,1], self.streamline[i][:,2],
+			ax.plot(self.streamline[i][:,0] / self.L0,
+					self.streamline[i][:,1] / self.L0,
+					self.streamline[i][:,2] / self.L0,
 					label = 'Traj {}'.format(i))
+		ax.set_xlim( (self.xmin / self.L0, self.xmax / self.L0) )
+		ax.set_ylim( (self.ymin / self.L0, self.ymax / self.L0) )
+		ax.set_zlim( (self.zmin / self.L0, self.zmax / self.L0) )
 		plt.legend()
 
 		fig = plt.figure()
 		ax = fig.gca(projection='3d')
-		ax.quiver(self.X, self.Y, self.Z, self.vx, self.vy, self.vz, length = 10.0)
+		ax.quiver(self.X / self.L0, self.Y / self.L0, self.Z / self.L0,
+					self.vx / self.U0, self.vy / self.U0, self.vz / self.U0,
+					length = 5)
 
 def Calc_error(U, U_hat, A, A_hat, T, l):
 	err_U = {}
@@ -271,7 +282,7 @@ def Calc_error(U, U_hat, A, A_hat, T, l):
 		for i in range(len(U)):
 			if len(U[i]) < 2 * l + 1:
 				continue
-			print ("Trajectory {} / {}".format(i, len(U)))
+			# print ("Trajectory {} / {}".format(i, len(U)))
 			# err_U[n].append(norm(U[i][:,-1] - U_hat[n][i][:,-1] , ord = 1))
 			# err_A[n].append(norm(A[i][:,-1] - A_hat[n][i][:,-1] , ord = 1))
 
@@ -287,8 +298,8 @@ def Calc_error(U, U_hat, A, A_hat, T, l):
 		err_A[n] = np.mean(np.array(err_A[n]))
 
 
-		print ("Velocity {}: {}".format(n, err_U[n]))
-		print ("Acceleration {}: {}".format(n, err_A[n]))
+		# print ("Velocity {}: {}".format(n, err_U[n]))
+		# print ("Acceleration {}: {}".format(n, err_A[n]))
 
 	# plt.legend()
 
@@ -302,57 +313,68 @@ def filter(names, streamline, T, l, dt):
 	return f.process()
 
 def main():
-	xmin, xmax = -50, 50
-	ymin, ymax = -50, 50
-	zmin, zmax = 0, 100
+
+	gamma = 100
+	sigma = 0.01
+	nu = 1
+
+	L0 = np.sqrt(2 * nu / sigma)
+	U0 = gamma / L0
+
+	xmin, xmax = -10 * L0, 10 * L0
+	ymin, ymax = -10 * L0, 10 * L0
+	zmin, zmax = 0, 20 * L0
 
 	Nx = Ny = Nz = 11
 
 	N_burger = 1
-	burger = Burger(N_burger, Nx, Ny, Nz, xmin, xmax, ymin, ymax, zmin, zmax, gamma = 100)
+	burger = Burger(N_burger, Nx, Ny, Nz, xmin, xmax, ymin, ymax, zmin, zmax,
+					gamma = gamma, sigma = sigma, nu = nu)
 	burger.flow_field()
 
 
-	dt = 0.1
-	N_t = 100
+	dt = 0.2 * L0 / U0
+	N_t = 500
 	t_end = N_t * dt
-	N_traj = 2
+	N_traj = 10
 	burger.trajectory(N_traj, dt, t_end)
 
-	skip = np.linspace(2, 5, 4).astype(int)
-	N_sample = np.linspace(3, 5, 3).astype(int)
-	delta = np.linspace(1e-3, 1e-1, 1) 
+	skip = np.linspace(1, 10, 5).astype(int)
+	# N_sample = np.linspace(3, 5, 3).astype(int)
+	width = np.linspace(0.4, 10, 5) * L0 / U0
+	delta = np.linspace(0, 1e-1, 3) * L0
 
 
-	names = ["Spline", "Finite difference", "Polynomial", "Gaussian"]
+	names = ["Finite difference", "Polynomial", "Gaussian"]
 
 	err_U = {}
 	err_A = {}
 
 	err_U["skip"] = skip
 	err_U["delta"] = delta
-	err_U["N_sample"] = N_sample
+	err_U["width"] = width
 
 	for n in names:
-		err_U[n] = np.zeros((len(skip), len(N_sample), len(delta)))
+		err_U[n] = np.zeros((len(skip), len(width), len(delta)))
 		err_A[n] = np.zeros_like(err_U[n])
 
 	for i in range(len(skip)):
-		for j in range(len(N_sample)):
+		for j in range(len(width)):
 			for k in range(len(delta)):
 
 				streamline, U, A, T = burger.distort(skip[i], delta[k])
 
 				dt_ = dt * skip[i]
 
-				U_hat, A_hat = filter(names, streamline, T, N_sample[j], dt_)
+				N_sample = max(1, int(width[j] / dt_ / 2))
 
-				err_U_, err_A_ = Calc_error(U, U_hat, A, A_hat, T, N_sample[j])
+				U_hat, A_hat = filter(names, streamline, T, N_sample, dt_)
+
+				err_U_, err_A_ = Calc_error(U, U_hat, A, A_hat, T, N_sample)
 
 				for n in names:
 					err_U[n][i,j,k] = err_U_[n]
 					err_A[n][i,j,k] = err_A_[n]
-
 
 	with open("err_U", 'w') as f:
 		pickle.dump(err_U, f)
@@ -360,10 +382,10 @@ def main():
 	with open("err_A", 'w') as f:
 		pickle.dump(err_A, f)
 
-	burger.make_plot(U_hat, A_hat, T)
+	# burger.make_plot(U_hat, A_hat, T)
 	plt.show()
 
-	print err_A["Gaussian"][:,:,0]
+	# print err_A["Gaussian"]
 
 if __name__ == "__main__":
 	main()

@@ -28,16 +28,16 @@ def surf_plot(X, Y, dict, delta):
 	fig = plt.figure()
 	ax = fig.gca(projection='3d')
 	for key, value in sorted(dict.iteritems()):
-		if key == "Finite difference":
-			continue
-		Z = value[:,:,delta].transpose()
-		surf = ax.plot_surface(X, Y, Z, cmap = cm.coolwarm,
-							linewidth = 0, shade = True)
+		if key == "Polynomial":
+			Z = value[:,:,delta].transpose()
+			surf = ax.plot_surface(X, Y, Z, cmap = cm.coolwarm,
+								linewidth = 0, shade = True)
 
 	# fig.legend()
 	ax.set_xlabel("skip")
-	ax.set_ylabel("N_sample")
+	ax.set_ylabel("width")
 	ax.set_zlabel("error")
+	ax.set_zscale('log')
 	fig.colorbar(surf, shrink = 0.75, aspect = 8)
 
 
@@ -55,8 +55,8 @@ def main():
 	delta = err_U["delta"]
 	del err_U["delta"]
 
-	N_sample = err_U["N_sample"]
-	del err_U["N_sample"]
+	width = err_U["width"]
+	del err_U["width"]
 
 	# X = [skip, delta, N_sample]
 
@@ -64,7 +64,9 @@ def main():
 	# make_plot(X, err_A, 0, 0, 0)
 	# plt.show()
 
-	X, Y = np.meshgrid(skip, N_sample)
+	# print err_A["Finite difference"][:,:,0]
+
+	X, Y = np.meshgrid(skip, width)
 	
 	surf_plot(X, Y, err_A, 0)
 	plt.show()
