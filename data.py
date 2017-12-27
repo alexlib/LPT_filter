@@ -39,9 +39,9 @@ class Data(object):
 						np.random.uniform(-self.burger.U0 / 2, self.burger.U0 / 2),
 						np.random.uniform(-self.burger.U0 / 2, self.burger.U0 / 2)])
 
-		A0 = np.array([np.random.normal(pdf[0, 0], pdf[0, 1]),
-						np.random.normal(pdf[1, 0], pdf[1, 1]),
-						np.random.normal(pdf[2, 0], pdf[2, 1])])
+		A0 = np.array([np.random.normal(self.pdf[0, 0], self.pdf[0, 1]),
+						np.random.normal(self.pdf[1, 0], self.pdf[1, 1]),
+						np.random.normal(self.pdf[2, 0], self.pdf[2, 1])])
 
 		t0 = 0
 
@@ -60,9 +60,9 @@ class Data(object):
 
 			s.append(r.y)
 
-			r.y[-3:] = np.array([np.random.normal(pdf[0, 0], pdf[0, 1]),
-						np.random.normal(pdf[1, 0], pdf[1, 1]),
-						np.random.normal(pdf[2, 0], pdf[2, 1])])
+			r.y[-3:] = np.array([np.random.normal(self.pdf[0, 0], self.pdf[0, 1]),
+						np.random.normal(self.pdf[1, 0], self.pdf[1, 1]),
+						np.random.normal(self.pdf[2, 0], self.pdf[2, 1])])
 
 			Z = np.dot(self.H, s[-1]) + np.random.normal(0, self.sigma_z, s[-1].shape) * self.h
 
@@ -164,7 +164,19 @@ class Data(object):
 def generate_data(mode, samples, steps):
 
 	burger, dt = generate_flow()
-	data = Data(mode, burger, None)
+	if mode == "flow":
+		data = Data(mode, burger, None)
+	elif mode == "sample":
+		Y_ = np.load("Y.npy")
+		pdf = np.zeros((3, 2))
+
+		for i in range(len(pdf)):
+			pdf[i,:] = np.array(norm.fit(Y_[:, i - 3]))
+
+		data = Data(mode, burger, pdf)
+
+	else:
+		raise(Error("Wrong mode"))
 
 	X, Y = data.create_dataset(samples, steps, dt)
 

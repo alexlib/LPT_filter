@@ -4,7 +4,7 @@ import math
 from keras import optimizers
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.layers import CuDNNLSTM, CuDNNGRU, LSTM
+from keras.layers import LSTM
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import numpy.polynomial.polynomial as P
@@ -12,94 +12,12 @@ from scipy.integrate import ode
 from scipy.stats import norm
 import argparse
 import pickle
+import os
+import shutil
 
 import data
 import synthetic_3d as syn
 
-# def foo(t, y):
-# 	return [y[3], y[4], y[5], y[6], y[7], y[8], 0, 0, 0]
-
-# class Data(object):
-# 	def __init__(self, burger, pdf, N_samples, steps, dt, sigma_a = 0.1, sigma_z = 0.05):
-
-# 		self.N_samples = N_samples
-# 		self.steps = steps
-# 		self.sigma_a = sigma_a
-# 		self.sigma_z = sigma_z
-# 		self.dt = dt
-
-# 		self.H = np.zeros((9,9))
-# 		self.H[0, 0] = 1
-# 		self.H[1, 1] = 1
-# 		self.H[2, 2] = 1
-
-# 		self.h = np.zeros(9)
-# 		self.h[:3] = 1
-
-# 		self.burger = burger
-# 		self.pdf = pdf
-
-# 		self.alpha = 0.9
-
-# 	def create_sequence(self):
-
-# 		X0 = np.array([np.random.uniform(self.burger.xmin, self.burger.xmax),
-# 						np.random.uniform(self.burger.xmin, self.burger.xmax),
-# 						np.random.uniform(self.burger.xmin, self.burger.xmax)])
-
-# 		U0 = np.array([np.random.uniform(-self.burger.U0 / 2, self.burger.U0 / 2),
-# 						np.random.uniform(-self.burger.U0 / 2, self.burger.U0 / 2),
-# 						np.random.uniform(-self.burger.U0 / 2, self.burger.U0 / 2)])
-
-# 		A0 = np.array([np.random.normal(pdf[0, 0], pdf[0, 1]),
-# 						np.random.normal(pdf[1, 0], pdf[1, 1]),
-# 						np.random.normal(pdf[2, 0], pdf[2, 1])])
-
-# 		t0 = 0
-
-# 		s = []
-# 		s.append(np.concatenate((X0, U0, A0)))
-# 		m = []
-# 		m.append(np.concatenate((X0, U0, A0)))
-
-# 		r = ode(foo).set_integrator('dopri5')
-# 		r.set_initial_value(s[0], t0)
-
-# 		step = 1
-# 		while r.successful() and step < self.steps:
-
-# 			r.integrate(r.t + self.dt)
-
-# 			s.append(r.y)
-
-# 			r.y[-3:] = np.array([np.random.normal(pdf[0, 0], pdf[0, 1]),
-# 						np.random.normal(pdf[1, 0], pdf[1, 1]),
-# 						np.random.normal(pdf[2, 0], pdf[2, 1])])
-
-# 			Z = np.dot(self.H, s[-1]) + np.random.normal(0, self.sigma_z, s[-1].shape) * self.h
-
-# 			if len(m) > 1:
-# 				Z[3:6] = (Z[:3] - m[-1][:3]) / self.dt
-# 				Z[6:] = (Z[:3] - 2 * m[-1][:3] + m[-2][:3]) / self.dt**2
-
-# 			m.append(Z)
-# 			step += 1
-
-# 		return np.array(s), np.array(m)
-
-# 	def create_dataset(self):
-
-# 		data = np.empty((0, 9))
-# 		label = np.empty((0, 9))
-# 		for _ in range(self.N_samples):
-# 			X, Z = self.create_sequence()
-# 			data = np.vstack((data, Z))
-# 			label = np.vstack((label, X))
-
-# 		# data = np.reshape(data, (self.N_samples, self.steps, -1))
-# 		# label = np.reshape(label, (self.N_samples, self.steps, -1))
-
-# 		return data, label
 
 def ployFit(x, dt, l):
 	t = np.arange(0, len(x) * dt + dt, dt)
@@ -122,10 +40,6 @@ def ployFit(x, dt, l):
 
 
 def main():
-	# Y_ = np.load("new_Traj.npy")
-	# pdf = np.zeros((3, 2))
-	# for i in range(len(pdf)):
-	# 	pdf[i,:] = np.array(norm.fit(Y_[:, i - 3]))
 
 	# dataset = Data(burger, pdf, samples, steps, dt)
 	# X, Y = dataset.create_dataset()
@@ -137,6 +51,7 @@ def main():
 	ap.add_argument("--lr", type = float, default = 0.001)
 	ap.add_argument("--epochs", type = int, default = 500)
 	ap.add_argument("--load", action = 'store_true')
+	ap.add_argument("--logdir", type = str)
 
 	args = ap.parse_args()
 
@@ -149,11 +64,16 @@ def main():
 	else:
 		X, Y = data.generate_data(args.mode, args.samples, args.steps)
 
+		if os.path.exists(args.logdir):
+			shutil.rmtree(args.logdir)
+		os.mkdir(args.logdir)
+		os.chdir(args.logdir)
+
 		np.save("X", X)
 		np.save("Y", Y)
 
 		with open("header.pickle", 'wb') as f:
-			pickle.dump((args.samples, args.steps))
+			pickle.dump((args.samples, args.steps), f)
 
 	scaler_X = MinMaxScaler()
 	X = scaler_X.fit_transform(X)
