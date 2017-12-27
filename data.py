@@ -60,7 +60,7 @@ class Data(object):
 
 			s.append(r.y)
 
-			r.y[-3:] = np.array([np.random.normal(self.pdf[0, 0], self.pdf[0, 1]),
+			r.y[-3:] = self.alpha * r.y[-3:] + (1 - self.alpha) * np.array([np.random.normal(self.pdf[0, 0], self.pdf[0, 1]),
 						np.random.normal(self.pdf[1, 0], self.pdf[1, 1]),
 						np.random.normal(self.pdf[2, 0], self.pdf[2, 1])])
 
